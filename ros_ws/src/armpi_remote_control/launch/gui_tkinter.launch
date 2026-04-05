@@ -1,0 +1,12 @@
+<launch>
+  <!-- 远程控制节点 -->
+  <node name="servo_state_publisher" pkg="armpi_remote_control" type="servo_state_publisher" output="screen">
+    <param name="servo_ids" value="[1, 2, 3, 4, 5, 6]" />
+    <param name="update_rate" value="10.0" />
+  </node>
+
+  <node name="servo_command_receiver" pkg="armpi_remote_control" type="servo_command_receiver" output="screen" />
+
+  <!-- Python Tkinter GUI节点 -->
+  <node name="servo_gui_tkinter" pkg="armpi_remote_control" type="servo_gui_tkinter.py" output="screen" />
+</launch>

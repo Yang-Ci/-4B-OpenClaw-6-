@@ -1,0 +1,13 @@
+<launch>
+  <arg name="update_rate" default="10.0" />
+  <arg name="servo_ids" default="[1, 2, 3, 4, 5, 6]" />
+
+  <node name="servo_state_publisher" pkg="armpi_remote_control" type="servo_state_publisher" output="screen">
+    <param name="update_rate" value="$(arg update_rate)" />
+    <param name="servo_ids" value="$(arg servo_ids)" />
+  </node>
+
+  <node name="servo_command_receiver" pkg="armpi_remote_control" type="servo_command_receiver" output="screen">
+  </node>
+
+</launch>

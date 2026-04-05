@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "mcp-server-demo": {
+      "command": "python",
+      "args": [
+        "e:\\audio\\mcp_server.py"
+      ],
+      "cwd": "e:\\audio",
+      "env": {}
+    }
+  }
+}

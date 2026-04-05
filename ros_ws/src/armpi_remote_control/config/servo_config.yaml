@@ -1,0 +1,42 @@
+# Servo configuration for ArmPi Pro remote control
+
+# Update rate for servo state publishing (Hz)
+update_rate: 10.0
+
+# Servo IDs to monitor and control
+servo_ids: [1, 2, 3, 4, 5, 6]
+
+# Servo name mapping
+servo_names:
+  1: "base_rotation"
+  2: "shoulder"
+  3: "elbow"
+  4: "wrist_pitch"
+  5: "wrist_roll"
+  6: "gripper"
+
+# Servo position limits (min, max)
+servo_limits:
+  1: [0, 1000]
+  2: [0, 1000]
+  3: [0, 1000]
+  4: [0, 1000]
+  5: [0, 1000]
+  6: [0, 1000]
+
+# Home positions
+home_positions:
+  1: 500
+  2: 500
+  3: 500
+  4: 500
+  5: 500
+  6: 500
+
+# Default duration for servo movements (ms)
+default_duration: 1000
+
+# Safety limits
+max_temperature: 85
+min_voltage: 4500
+max_voltage: 8000

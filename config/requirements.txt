@@ -1,0 +1,7 @@
+pyaudio
+openai-whisper
+edge-tts
+dashscope
+fastmcp
+flask
+httpx
