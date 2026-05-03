@@ -99,14 +99,18 @@ app.get('/api/joints', (req, res) => {
   res.json(joints);
 });
 
-app.listen(PORT, () => {
-  console.log('\n========================================');
-  console.log('  ArmPi Pro Robot Simulator Started!');
-  console.log('========================================');
-  console.log(`  Local:   http://localhost:${PORT}`);
-  console.log(`  URDF:    http://localhost:${PORT}/api/urdf`);
-  console.log(`  Config:  http://localhost:${PORT}/api/config`);
-  console.log('----------------------------------------');
-  console.log(`  Port: ${PORT} (change with PORT env var)`);
-  console.log('  Press CTRL+C to stop the server\n');
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log('\n========================================');
+    console.log('  ArmPi Pro Robot Simulator Started!');
+    console.log('========================================');
+    console.log(`  Local:   http://localhost:${PORT}`);
+    console.log(`  URDF:    http://localhost:${PORT}/api/urdf`);
+    console.log(`  Config:  http://localhost:${PORT}/api/config`);
+    console.log('----------------------------------------');
+    console.log(`  Port: ${PORT} (change with PORT env var)`);
+    console.log('  Press CTRL+C to stop the server\n`);
+  });
+}
+
+module.exports = app;
