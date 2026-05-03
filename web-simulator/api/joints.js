@@ -1,4 +1,4 @@
-export default function handler(req, res) {
+module.exports = function handler(req, res) {
   res.status(200).json([
     { name: 'joint1', min: -2.09, max: 2.09, current: 0, axis: 'Z-rotation (base)' },
     { name: 'joint2', min: -1.57, max: 1.57, current: 0, axis: 'X-rotation (shoulder)' },
@@ -7,4 +7,4 @@ export default function handler(req, res) {
     { name: 'joint5', min: -2.09, max: 2.09, current: 0, axis: 'Z-rotation (wrist2)' },
     { name: 'r_joint', min: -1.57, max: 1.57, current: 0, axis: 'Gripper open/close' }
   ]);
-}
+};

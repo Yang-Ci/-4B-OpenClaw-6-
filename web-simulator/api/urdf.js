@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-export default function handler(req, res) {
+module.exports = function handler(req, res) {
   const urdfFile = path.join(process.cwd(), 'assets', 'urdf', 'armpi_fpv.urdf');
   try {
     const content = fs.readFileSync(urdfFile, 'utf8');
@@ -10,4 +10,4 @@ export default function handler(req, res) {
   } catch(e) {
     res.status(500).json({ error: 'URDF not found', path: urdfFile });
   }
-}
+};
