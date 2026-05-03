@@ -99,6 +99,14 @@ app.get('/api/joints', (req, res) => {
   res.json(joints);
 });
 
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log('\n========================================');
