@@ -329,8 +329,7 @@ function loadURDF() {
         };
 
         manager.onError = function(url) {
-            console.error('Error loading:', url);
-            showError('Failed to load: ' + url);
+            console.warn('Error loading:', url);
         };
 
         manager.onLoad = function() {
@@ -369,11 +368,21 @@ function loadURDF() {
         };
 
         const loader = new URDFLoader(manager);
-        loader.packages = window.location.origin + '/api';
-        
-        loader.load(
-            '/api/urdf',
-            function(result) {
+        const loadAttempts = [
+            {
+                urdf: '/assets/urdf/armpi_fpv.urdf',
+                packages: {
+                    armpi_fpv_description: '/assets',
+                    armpi_fpv_descrption: '/assets'
+                }
+            },
+            {
+                urdf: '/api/urdf',
+                packages: window.location.origin + '/api'
+            }
+        ];
+
+        function handleRobotLoaded(result) {
                 robot = result;
 
                 robot.traverse(function(child) {
@@ -415,16 +424,30 @@ function loadURDF() {
                     console.warn('Warning: No joints found in the model');
                     updateStatus(t('modelNoJoints'));
                 }
-            },
-            
-            undefined,
-            
-            function(error) {
-                console.error('Error loading URDF:', error);
-                showError('Failed to load URDF model: ' + (error.message || error));
-                hideLoading();
             }
-        );
+
+        function tryLoadRobot(attemptIndex) {
+            const attempt = loadAttempts[attemptIndex];
+            loader.packages = attempt.packages;
+
+            loader.load(
+                attempt.urdf,
+                handleRobotLoaded,
+                undefined,
+                function(error) {
+                    console.warn('URDF load attempt failed:', attempt.urdf, error);
+                    if (attemptIndex + 1 < loadAttempts.length) {
+                        tryLoadRobot(attemptIndex + 1);
+                    } else {
+                        console.error('Error loading URDF:', error);
+                        showError('Failed to load URDF model from /assets/urdf/armpi_fpv.urdf or /api/urdf');
+                        hideLoading();
+                    }
+                }
+            );
+        }
+
+        tryLoadRobot(0);
 
     } catch (error) {
         console.error('URDF loading error:', error);
