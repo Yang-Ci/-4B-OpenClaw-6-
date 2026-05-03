@@ -9,116 +9,124 @@ const configPath = path.join(__dirname, 'config.json');
 let config = {
   server: { port: 3000, host: 'localhost' },
   robot: {
-    urdfPath: '../src/armpi_fpv_descrption',
-    urdfFile: 'urdf/armpi_fpv.urdf',
-    meshesPath: 'meshes'
-  }
+    urdfPath: './assets/urdf',
+    urdfFile: 'armpi_fpv.urdf',
+    meshesPath: './assets/meshes'
+  },
+  display: { defaultLanguage: 'zh' }
 };
 
 try {
   if (fs.existsSync(configPath)) {
     const configFile = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     config = { ...config, ...configFile };
-    console.log('✓ Config loaded from config.json');
   }
-} catch (err) {
-  console.log('⚠ Using default config (config.json not found or invalid)');
-}
-
-const PORT = process.env.PORT || config.server.port;
+} catch (err) {}
 
 app.use(cors());
 app.use(express.json());
 
-app.use(express.static(path.join(__dirname, 'public'), {
-  etag: false,
-  setHeaders: (res, path) => {
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    res.set('Pragma', 'no-cache');
-    res.set('Expires', '0');
+function loadFile(filePath) {
+  try {
+    return fs.readFileSync(path.join(__dirname, filePath));
+  } catch (e) {
+    return null;
   }
-}));
+}
 
-app.use('/modules', express.static(path.join(__dirname, 'node_modules')));
+const indexHtml = loadFile('public/index.html');
+const faviconPng = loadFile('public/favicon.png');
+const mainJs = loadFile('public/js/main.js');
+const stlLoaderJs = loadFile('public/lib/STLLoader.js');
+const stlLoaderUmdJs = loadFile('public/lib/STLLoader-umd.js');
+const threeMinJs = loadFile('public/lib/three.min.js');
+const threeR128MinJs = loadFile('public/lib/three-r128.min.js');
 
-app.get('/api/config', (req, res) => {
-  res.json({
-    robot: config.robot,
-    display: config.display || {}
+const urdfContent = loadFile(path.join(config.robot.urdfPath, config.robot.urdfFile));
+
+const meshDir = path.join(__dirname, config.robot.meshesPath);
+const meshFiles = {};
+if (fs.existsSync(meshDir)) {
+  fs.readdirSync(meshDir).forEach(f => {
+    meshFiles[f] = fs.readFileSync(path.join(meshDir, f));
   });
+}
+
+app.get('/', (req, res) => {
+  if (!indexHtml) return res.status(500).send('index.html not found');
+  res.type('html').send(indexHtml);
 });
 
-const urdfPath = path.resolve(path.join(__dirname, config.robot.urdfPath));
-const urdfFile = path.join(urdfPath, config.robot.urdfFile);
-const meshesPath = path.join(urdfPath, config.robot.meshesPath);
+app.get('/index.html', (req, res) => {
+  if (!indexHtml) return res.status(500).send('index.html not found');
+  res.type('html').send(indexHtml);
+});
 
-console.log('\n📁 URDF Path:', urdfPath);
-console.log('📄 URDF File:', urdfFile);
-console.log('🎨 Meshes Path:', meshesPath);
+app.get('/favicon.png', (req, res) => {
+  if (!faviconPng) return res.status(404).send('');
+  res.type('image/png').send(faviconPng);
+});
+
+app.get('/js/main.js', (req, res) => {
+  if (!mainJs) return res.status(404).send('');
+  res.type('application/javascript').send(mainJs);
+});
+
+app.get('/lib/STLLoader.js', (req, res) => {
+  if (!stlLoaderJs) return res.status(404).send('');
+  res.type('application/javascript').send(stlLoaderJs);
+});
+
+app.get('/lib/STLLoader-umd.js', (req, res) => {
+  if (!stlLoaderUmdJs) return res.status(404).send('');
+  res.type('application/javascript').send(stlLoaderUmdJs);
+});
+
+app.get('/lib/three.min.js', (req, res) => {
+  if (!threeMinJs) return res.status(404).send('');
+  res.type('application/javascript').send(threeMinJs);
+});
+
+app.get('/lib/three-r128.min.js', (req, res) => {
+  if (!threeR128MinJs) return res.status(404).send('');
+  res.type('application/javascript').send(threeR128MinJs);
+});
+
+app.get('/api/config', (req, res) => {
+  res.json({ robot: config.robot, display: config.display || {} });
+});
 
 app.get('/api/urdf', (req, res) => {
-  try {
-    let urdfContent = fs.readFileSync(urdfFile, 'utf8');
-    res.type('application/xml').send(urdfContent);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to read URDF file', details: err.message });
-  }
+  if (!urdfContent) return res.status(500).json({ error: 'URDF file not found' });
+  res.type('application/xml').send(urdfContent);
 });
 
 app.get('/api/meshes/:filename', (req, res) => {
-  const filename = req.params.filename;
-  const filePath = path.join(meshesPath, filename);
-
-  if (fs.existsSync(filePath)) {
-    res.sendFile(filePath);
-  } else {
-    res.status(404).json({ error: `File not found: ${filename}` });
-  }
+  const data = meshFiles[req.params.filename];
+  if (!data) return res.status(404).json({ error: `File not found: ${req.params.filename}` });
+  res.type('model/stl').send(data);
 });
 
 app.get('/api/armpi_fpv_description/meshes/:filename', (req, res) => {
-  const filename = req.params.filename;
-  const filePath = path.join(meshesPath, filename);
-
-  if (fs.existsSync(filePath)) {
-    res.sendFile(filePath);
-  } else {
-    res.status(404).json({ error: `File not found: ${filename}` });
-  }
+  const data = meshFiles[req.params.filename];
+  if (!data) return res.status(404).json({ error: `File not found: ${req.params.filename}` });
+  res.type('model/stl').send(data);
 });
 
 app.get('/api/joints', (req, res) => {
-  const joints = [
+  res.json([
     { name: 'joint1', min: -2.09, max: 2.09, current: 0, axis: 'Z-rotation (base)' },
     { name: 'joint2', min: -1.57, max: 1.57, current: 0, axis: 'X-rotation (shoulder)' },
     { name: 'joint3', min: -2.09, max: 2.09, current: 0, axis: 'X-rotation (elbow)' },
     { name: 'joint4', min: -2.09, max: 2.09, current: 0, axis: 'X-rotation (wrist1)' },
     { name: 'joint5', min: -2.09, max: 2.09, current: 0, axis: 'Z-rotation (wrist2)' },
     { name: 'r_joint', min: -1.57, max: 1.57, current: 0, axis: 'Gripper open/close' }
-  ];
-  res.json(joints);
-});
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  ]);
 });
 
 app.use((req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  if (!indexHtml) return res.status(500).send('index.html not found');
+  res.type('html').send(indexHtml);
 });
-
-if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log('\n========================================');
-    console.log('  ArmPi Pro Robot Simulator Started!');
-    console.log('========================================');
-    console.log(`  Local:   http://localhost:${PORT}`);
-    console.log(`  URDF:    http://localhost:${PORT}/api/urdf`);
-    console.log(`  Config:  http://localhost:${PORT}/api/config`);
-    console.log('----------------------------------------');
-    console.log(`  Port: ${PORT} (change with PORT env var)`);
-    console.log('  Press CTRL+C to stop the server\n`);
-  });
-}
 
 module.exports = app;
