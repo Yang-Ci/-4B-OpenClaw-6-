@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="/favicon.png">
+    <title>ArmPi Pro Robot Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            overflow: hidden;
+        }
+
+        #container {
+            display: flex;
+            height: 100vh;
+        }
+
+        #canvas-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #canvas-container canvas {
+            display: block;
+        }
+
+        #sidebar {
+            width: 350px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            overflow-y: auto;
+            overflow-x: visible;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            position: relative;
+        }
+
+        #sidebar.collapsed {
+            transform: translateX(100%);
+            opacity: 0;
+            position: absolute;
+            right: 0;
+            pointer-events: none;
+        }
+
+        #sidebar-toggle {
+            position: fixed;
+            right: 350px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 80px;
+            background: rgba(0, 212, 255, 0.9);
+            border: 2px solid rgba(0, 212, 255, 1);
+            border-right: none;
+            border-radius: 8px 0 0 8px;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            box-shadow: -2px 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        #sidebar-toggle:hover {
+            background: rgba(0, 212, 255, 1);
+            width: 45px;
+            box-shadow: -4px 4px 15px rgba(0, 212, 255, 0.5);
+        }
+
+        #sidebar.collapsed + #sidebar-toggle {
+            right: 0;
+        }
+
+        .mode-indicator {
+            position: absolute;
+            top: 70px;
+            left: 20px;
+            background: rgba(0, 212, 255, 0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            display: none;
+            animation: fadeInOut 0.3s ease;
+            z-index: 1000;
+        }
+
+        @keyframes fadeInOut {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            font-size: 24px;
+            background: linear-gradient(135deg, #00d4ff, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        h1 .robot-icon {
+            width: 45px;
+            height: 45px;
+            -webkit-text-fill-color: unset;
+            background: none;
+            display: inline-block;
+            filter: drop-shadow(0 0 6px rgba(0, 212, 255, 0.5)) drop-shadow(0 0 12px rgba(124, 58, 237, 0.3));
+            animation: iconGlow 2s ease-in-out infinite alternate;
+            vertical-align: middle;
+        }
+
+        @keyframes iconGlow {
+            from {
+                filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.6)) drop-shadow(0 0 16px rgba(124, 58, 237, 0.4));
+                transform: scale(1);
+            }
+            to {
+                filter: drop-shadow(0 0 12px rgba(0, 212, 255, 0.8)) drop-shadow(0 0 24px rgba(124, 58, 237, 0.6));
+                transform: scale(1.05);
+            }
+        }
+
+        .lang-switch {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #00d4ff;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .lang-switch:hover {
+            background: rgba(0, 212, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 25px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .control-group h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #00d4ff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .joint-control {
+            margin-bottom: 18px;
+        }
+
+        .joint-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .joint-name {
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .joint-value {
+            font-family: 'Monaco', monospace;
+            color: #00d4ff;
+            background: rgba(0, 212, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(135deg, #00d4ff, #7c3aed);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0, 212, 255, 0.4);
+            transition: transform 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            background: linear-gradient(135deg, #00d4ff, #7c3aed);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4);
+        }
+
+        .drag-mode-btn {
+            background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+        }
+
+        .drag-mode-btn.active {
+            background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                box-shadow: 0 5px 20px rgba(239, 68, 68, 0.4);
+                transform: translateY(-2px);
+            }
+            50% { 
+                box-shadow: 0 8px 30px rgba(239, 68, 68, 0.6);
+                transform: translateY(-3px);
+            }
+        }
+
+        .end-effector-marker {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, #00d4ff 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: auto;
+            cursor: grab;
+            display: none;
+            z-index: 1000;
+            animation: markerPulse 1.5s infinite;
+        }
+
+        .end-effector-marker:active {
+            cursor: grabbing;
+            transform: scale(1.3);
+        }
+
+        @keyframes markerPulse {
+            0%, 100% {
+                opacity: 0.7;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+        }
+
+        .ghost-indicator {
+            position: absolute;
+            top: 110px;
+            left: 20px;
+            background: rgba(124, 58, 237, 0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            display: none;
+            animation: fadeInOut 0.3s ease;
+            z-index: 1000;
+        }
+
+        .status-bar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 13px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #4ade80;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .camera-info {
+            position: absolute;
+            bottom: 70px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 11px;
+            color: #00d4ff;
+            font-family: monospace;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 12px;
+            color: #888;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .grab-panel {
+            margin-top: 15px;
+            padding: 14px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: 12px;
+        }
+        .grab-panel h3 {
+            margin: 0 0 6px 0;
+            font-size: 16px;
+            color: #f59e0b;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .grab-hint {
+            font-size: 10.5px;
+            color: #777;
+            margin: 0 0 10px 0;
+            line-height: 1.4;
+        }
+        .grab-items-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+        .grab-item-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            border-radius: 7px;
+            font-size: 11.5px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            background: rgba(255,255,255,0.04);
+            color: #bbb;
+            transition: all 0.2s;
+        }
+        .grab-item-chip:hover {
+            background: rgba(255,255,255,0.08);
+        }
+        .grab-item-chip.selected {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+        .grab-item-chip.grabbed {
+            opacity: 0.35;
+            text-decoration: line-through;
+            pointer-events: none;
+        }
+        .grab-item-chip .item-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 0 3px rgba(0,0,0,0.3);
+        }
+        .grab-panel button {
+            width: 100%;
+            padding: 9px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            color: white;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .grab-panel button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(26, 26, 46, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(0, 212, 255, 0.2);
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #00d4ff;
+        }
+
+        .error-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            text-align: center;
+            z-index: 2000;
+            display: none;
+        }
+
+        .error-message h2 {
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .error-message p {
+            font-size: 14px;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loading-text" data-i18n="loading">正在加载机械臂模型...</div>
+    </div>
+
+    <div class="error-message" id="error">
+        <h2 data-i18n="errorTitle">⚠️ 加载错误</h2>
+        <p id="error-text">机械臂模型加载失败</p>
+    </div>
+
+    <div id="container">
+        <div id="canvas-container">
+            <div class="status-bar">
+                <span class="status-dot"></span>
+                <span id="status-text" data-i18n="statusReady">系统就绪</span>
+            </div>
+            <div class="camera-info" id="camera-info">
+                📷 Cam: <span id="cam-pos">--</span>
+            </div>
+            <div class="instructions" data-i18n="instructions">
+                🖱️ 左键拖动旋转 | 滚轮缩放 | 右键拖动平移
+            </div>
+        </div>
+
+        <div id="sidebar">
+            <div class="header">
+                <h1><svg class="robot-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="robotGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#00d4ff;stop-opacity:1"/><stop offset="100%" style="stop-color:#7c3aed;stop-opacity:1"/></linearGradient></defs><rect x="12" y="18" width="40" height="34" rx="10" fill="url(#robotGrad)"/><rect x="20" y="26" width="8" height="8" rx="4" fill="#1a1a2e"/><rect x="36" y="26" width="8" height="8" rx="4" fill="#1a1a2e"/><circle cx="24" cy="30" r="2" fill="#00d4ff"/><circle cx="40" cy="30" r="2" fill="#00d4ff"/><rect x="25" y="40" width="14" height="3" rx="1.5" fill="#1a1a2e"/><line x1="22" y1="14" x2="22" y2="8" stroke="url(#robotGrad)" stroke-width="3" stroke-linecap="round"/><line x1="42" y1="14" x2="42" y2="8" stroke="url(#robotGrad)" stroke-width="3" stroke-linecap="round"/><circle cx="22" cy="6" r="3" fill="#00d4ff"/><circle cx="42" cy="6" r="3" fill="#00d4ff"/><rect x="27" y="16" width="10" height="4" rx="2" fill="url(#robotGrad)"/></svg> ArmPi Pro</h1>
+                <button class="lang-switch" onclick="toggleLanguage()" id="langBtn">中文</button>
+            </div>
+            <p class="subtitle" data-i18n="subtitle">6-DOF Robot Arm Real-time Simulator</p>
+
+            <div class="control-group">
+                <h3 data-i18n="jointControl">🎮 Joint Control</h3>
+
+                <div class="joint-control">
+                    <div class="joint-label">
+                        <span class="joint-name" data-i18n="joint1">Joint 1 (Base)</span>
+                        <span class="joint-value" id="joint1-value">0.00°</span>
+                    </div>
+                    <input type="range" id="joint1" min="-120" max="120" value="0" step="1">
+                </div>
+
+                <div class="joint-control">
+                    <div class="joint-label">
+                        <span class="joint-name" data-i18n="joint2">Joint 2 (Shoulder)</span>
+                        <span class="joint-value" id="joint2-value">0.00°</span>
+                    </div>
+                    <input type="range" id="joint2" min="-90" max="90" value="5" step="1">
+                </div>
+
+                <div class="joint-control">
+                    <div class="joint-label">
+                        <span class="joint-name" data-i18n="joint3">Joint 3 (Elbow)</span>
+                        <span class="joint-value" id="joint3-value">0.00°</span>
+                    </div>
+                    <input type="range" id="joint3" min="-120" max="120" value="65" step="1">
+                </div>
+
+                <div class="joint-control">
+                    <div class="joint-label">
+                        <span class="joint-name" data-i18n="joint4">Joint 4 (Wrist 1)</span>
+                        <span class="joint-value" id="joint4-value">0.00°</span>
+                    </div>
+                    <input type="range" id="joint4" min="-120" max="120" value="30" step="1">
+                </div>
+
+                <div class="joint-control">
+                    <div class="joint-label">
+                        <span class="joint-name" data-i18n="joint5">Joint 5 (Wrist 2)</span>
+                        <span class="joint-value" id="joint5-value">0.00°</span>
+                    </div>
+                    <input type="range" id="joint5" min="-120" max="120" value="0" step="1">
+                </div>
+
+                <div class="joint-control">
+                    <div class="joint-label">
+                        <span class="joint-name" data-i18n="gripper">Gripper</span>
+                        <span class="joint-value" id="gripper-value">0.00°</span>
+                    </div>
+                    <input type="range" id="gripper" min="0" max="90" value="0" step="1">
+                </div>
+            </div>
+
+            <button onclick="resetJoints()" data-i18n="resetBtn">🔄 Reset All Joints</button>
+            <button onclick="toggleAnimation()" style="background: linear-gradient(135deg, #10b981, #059669);" data-i18n="animationBtn">
+                ▶️ Demo Animation
+            </button>
+            <button class="drag-mode-btn" id="dragModeBtn" onclick="toggleDragMode()" data-i18n="dragModeBtn">
+                🎯 Drag Mode (IK)
+            </button>
+            <button onclick="generateTrajectory()" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);" data-i18n="trajectoryBtn" id="trajectoryBtn">
+                🛤️ Trajectory
+            </button>
+            <button onclick="toggleGrabMode()" style="background: linear-gradient(135deg, #f59e0b, #d97706);" data-i18n="grabTaskBtn" id="grabTaskBtn">
+                🤏 Grab Task
+            </button>
+
+            <div id="grab-panel" class="grab-panel control-group" style="display:none;">
+                <h3 data-i18n="grabPanelTitle">🤏 Grab Task</h3>
+                <p class="grab-hint" data-i18n="grabHint">Click an item in the scene, then press Start</p>
+                <div id="grab-items-list" class="grab-items-list"></div>
+                <button onclick="startGrabSequence()" data-i18n="startGrabBtn" id="startGrabBtn">▶️ Start Grab</button>
+                <button onclick="toggleGrabMode()" data-i18n="exitGrabModeBtn" style="background:linear-gradient(135deg,#ef4444,#dc2626);margin-top:8px;">⏹️ Exit</button>
+            </div>
+        </div>
+
+        <div id="mode-indicator" class="mode-indicator"></div>
+        <div id="ghost-indicator" class="ghost-indicator"></div>
+        <div id="end-effector-marker" class="end-effector-marker"></div>
+    </div>
+
+    <button id="sidebar-toggle" onclick="toggleSidebar()">◀</button>
+
+    <!-- 使用本地库文件 (Three.js r128 + 传统loader) -->
+    <script src="/lib/three-r128.min.js"></script>
+    <script src="/lib/STLLoader-umd.js"></script>
+    <script src="/modules/urdf-loader/umd/URDFLoader.js"></script>
+    <script src="./js/main.js"></script>
+    
+    <script>
+        const i18n = {
+            zh: {
+                loading: '正在加载机械臂模型...',
+                errorTitle: '⚠️ 加载错误',
+                statusReady: '系统就绪',
+                instructions: '🖱️ 左键拖动旋转 | 滚轮缩放 | 右键拖动平移',
+                subtitle: '6自由度机械臂实时仿真器',
+                jointControl: '🎮 关节控制',
+                joint1: '关节 1 (底座)',
+                joint2: '关节 2 (肩部)',
+                joint3: '关节 3 (肘部)',
+                joint4: '关节 4 (腕部1)',
+                joint5: '关节 5 (腕部2)',
+                gripper: '夹爪',
+                resetBtn: '🔄 重置所有关节',
+                animationBtn: '▶️ 演示动画',
+                stopAnimationBtn: '⏹️ 停止演示',
+                dragModeBtn: '🎯 拖动模式 (逆运动学)',
+                trajectoryBtn: '🛤️ 轨迹生成',
+                grabTaskBtn: '🤏 抓取任务',
+                exitGrabModeBtn: '⏹️ 退出抓取模式',
+                grabPanelTitle: '🤏 抓取任务',
+                grabHint: '点击场景中的物品选中，然后按开始抓取',
+                startGrabBtn: '▶️ 开始抓取',
+                exitDragModeBtn: '⏹️ 退出拖动模式',
+                dragModeActive: '🎯 拖动模式已激活 - 拖动蓝色标记移动末端执行器',
+                ghostPreview: '👻 虚影预览: 松手后紫色虚影平滑过渡到目标位置',
+                targetPos: '🎯 目标:',
+                ghostInfo: '👻 虚影:',
+                ghostTransition: '👻 虚影过渡中... 从原始姿态平滑移动到目标姿态',
+                unreachable: '⚠️ 位置不可达 - 请尝试靠近机械臂底座的位置',
+                modelLoaded: '✅ 模型加载成功',
+                modelNoJoints: '⚠️ 模型已加载但未检测到关节',
+                grabModeActive: '🤏 抓取模式 - 点击场景中的物品选中',
+                grabComplete: '✅ 抓取完成！选择下一个物品',
+                grabItemRedCube: '红色方块',
+                grabItemBlueSphere: '蓝色球体',
+                grabItemGreenCylinder: '绿色圆柱',
+                grabItemOrangeCone: '橙色圆锥',
+                grabItemYellowRing: '黄色圆环',
+                langBtn: 'English'
+            },
+            en: {
+                loading: 'Loading robot model...',
+                errorTitle: '⚠️ Loading Error',
+                statusReady: 'System Ready',
+                instructions: '🖱️ Left-drag to rotate | Scroll to zoom | Right-drag to pan',
+                subtitle: '6-DOF Robot Arm Real-time Simulator',
+                jointControl: '🎮 Joint Control',
+                joint1: 'Joint 1 (Base)',
+                joint2: 'Joint 2 (Shoulder)',
+                joint3: 'Joint 3 (Elbow)',
+                joint4: 'Joint 4 (Wrist 1)',
+                joint5: 'Joint 5 (Wrist 2)',
+                gripper: 'Gripper',
+                resetBtn: '🔄 Reset All Joints',
+                animationBtn: '▶️ Demo Animation',
+                stopAnimationBtn: '⏹️ Stop Animation',
+                dragModeBtn: '🎯 Drag Mode (IK)',
+                trajectoryBtn: '🛤️ Generate Trajectory',
+                grabTaskBtn: '🤏 Grab Task',
+                exitGrabModeBtn: '⏹️ Exit Grab Mode',
+                grabPanelTitle: '🤏 Grab Task',
+                grabHint: 'Click an item in the scene to select, then press Start',
+                startGrabBtn: '▶️ Start Grab',
+                exitDragModeBtn: '⏹️ Exit Drag Mode',
+                dragModeActive: '🎯 Drag Mode Active - Drag blue marker to move end effector',
+                ghostPreview: '👻 Ghost Preview: Purple ghost transitions smoothly after release',
+                targetPos: '🎯 Target:',
+                ghostInfo: '👻 Ghost:',
+                ghostTransition: '👻 Ghost transitioning... Smooth move from original to target pose',
+                unreachable: '⚠️ Position unreachable - Try closer to arm base',
+                modelLoaded: '✅ Model loaded successfully',
+                modelNoJoints: '⚠️ Model loaded but no joints detected',
+                grabModeActive: '🤏 Grab Mode - Click items in scene to select',
+                grabComplete: '✅ Grab complete! Select next item',
+                grabItemRedCube: 'Red Cube',
+                grabItemBlueSphere: 'Blue Sphere',
+                grabItemGreenCylinder: 'Green Cylinder',
+                grabItemOrangeCone: 'Orange Cone',
+                grabItemYellowRing: 'Yellow Ring',
+                langBtn: '中文'
+            }
+        };
+
+        window.i18n = i18n;
+
+        let currentLang = localStorage.getItem('language') || 'zh';
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            localStorage.setItem('language', currentLang);
+            applyLanguage();
+        }
+
+        function applyLanguage() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[currentLang][key]) {
+                    el.textContent = i18n[currentLang][key];
+                }
+            });
+
+            const langBtn = document.getElementById('langBtn');
+            if (langBtn) {
+                langBtn.textContent = i18n[currentLang].langBtn;
+            }
+
+            if (typeof populateGrabItemsList === 'function') {
+                populateGrabItemsList();
+            }
+        }
+
+        applyLanguage();
+    </script>
+</body>
+</html>

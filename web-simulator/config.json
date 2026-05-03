@@ -1,0 +1,1 @@
+{"server": {"port": 3000, "host": "localhost"}, "robot": {"urdfPath": "../src/armpi_fpv_descrption", "urdfFile": "urdf/armpi_fpv.urdf", "meshesPath": "meshes"}, "display": {"defaultLanguage": "zh", "cameraPosition": {"x": -0.34, "y": 0.25, "z": -0.5}, "robotRotationX": -1.5707963267948966, "robotPositionY": 0.02}}
