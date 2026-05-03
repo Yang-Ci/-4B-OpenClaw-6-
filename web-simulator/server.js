@@ -5,7 +5,17 @@ const fs = require('fs');
 
 const app = express();
 
-const configPath = path.join(__dirname, 'config.json');
+function resolveBase() {
+  const candidates = [process.cwd(), __dirname, '/var/task'];
+  for (const dir of candidates) {
+    const testPath = path.join(dir, 'public', 'index.html');
+    try { if (fs.existsSync(testPath)) return dir; } catch(e) {}
+  }
+  return process.cwd();
+}
+
+const BASE_DIR = resolveBase();
+
 let config = {
   server: { port: 3000, host: 'localhost' },
   robot: {
@@ -17,21 +27,18 @@ let config = {
 };
 
 try {
+  const configPath = path.join(BASE_DIR, 'config.json');
   if (fs.existsSync(configPath)) {
-    const configFile = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    config = { ...config, ...configFile };
+    config = { ...config, ...JSON.parse(fs.readFileSync(configPath, 'utf8')) };
   }
 } catch (err) {}
 
 app.use(cors());
 app.use(express.json());
 
-function loadFile(filePath) {
-  try {
-    return fs.readFileSync(path.join(__dirname, filePath));
-  } catch (e) {
-    return null;
-  }
+function loadFile(relativePath) {
+  const fullPath = path.join(BASE_DIR, relativePath);
+  try { return fs.readFileSync(fullPath); } catch (e) { return null; }
 }
 
 const indexHtml = loadFile('public/index.html');
@@ -44,8 +51,8 @@ const threeR128MinJs = loadFile('public/lib/three-r128.min.js');
 
 const urdfContent = loadFile(path.join(config.robot.urdfPath, config.robot.urdfFile));
 
-const meshDir = path.join(__dirname, config.robot.meshesPath);
 const meshFiles = {};
+const meshDir = path.join(BASE_DIR, config.robot.meshesPath);
 if (fs.existsSync(meshDir)) {
   fs.readdirSync(meshDir).forEach(f => {
     meshFiles[f] = fs.readFileSync(path.join(meshDir, f));
@@ -53,7 +60,7 @@ if (fs.existsSync(meshDir)) {
 }
 
 app.get('/', (req, res) => {
-  if (!indexHtml) return res.status(500).send('index.html not found');
+  if (!indexHtml) return res.status(500).send('BASE_DIR:' + BASE_DIR + ' index.html not found');
   res.type('html').send(indexHtml);
 });
 
@@ -97,19 +104,19 @@ app.get('/api/config', (req, res) => {
 });
 
 app.get('/api/urdf', (req, res) => {
-  if (!urdfContent) return res.status(500).json({ error: 'URDF file not found' });
+  if (!urdfContent) return res.status(500).json({ error: 'URDF not found', base: BASE_DIR });
   res.type('application/xml').send(urdfContent);
 });
 
 app.get('/api/meshes/:filename', (req, res) => {
   const data = meshFiles[req.params.filename];
-  if (!data) return res.status(404).json({ error: `File not found: ${req.params.filename}` });
+  if (!data) return res.status(404).json({ error: 'not found: ' + req.params.filename });
   res.type('model/stl').send(data);
 });
 
 app.get('/api/armpi_fpv_description/meshes/:filename', (req, res) => {
   const data = meshFiles[req.params.filename];
-  if (!data) return res.status(404).json({ error: `File not found: ${req.params.filename}` });
+  if (!data) return res.status(404).json({ error: 'not found: ' + req.params.filename });
   res.type('model/stl').send(data);
 });
 
@@ -125,7 +132,7 @@ app.get('/api/joints', (req, res) => {
 });
 
 app.use((req, res) => {
-  if (!indexHtml) return res.status(500).send('index.html not found');
+  if (!indexHtml) return res.status(500).send('BASE_DIR:' + BASE_DIR + ' fallback index.html not found');
   res.type('html').send(indexHtml);
 });
 
