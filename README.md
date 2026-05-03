@@ -1,6 +1,6 @@
-# Audio 项目文件结构
+# ArmPi Pro 项目文件结构
 
-本项目包含音频录制、语音识别、文本转语音和 MCP 服务等相关功能。
+本项目包含音频录制、语音识别、文本转语音、MCP 服务和 Web 仿真器等相关功能。
 
 ## 📁 目录结构
 
@@ -25,6 +25,22 @@ e:\audio/
 │   ├── mcp_server.py          # MCP 基础服务器
 │   ├── mcp_server_http.py     # MCP HTTP 服务器
 │   └── mcp_server_web.py      # MCP Web 界面服务器
+│
+├── web-simulator/       # 🌐 Web 机械臂仿真器 ⭐ 新增
+│   ├── api/                   # Vercel Serverless API 路由
+│   │   ├── config.js               # 配置接口
+│   │   ├── urdf.js                 # URDF 模型接口
+│   │   ├── joints.js               # 关节控制接口
+│   │   └── meshes/[filename].js     # STL 网格文件接口
+│   ├── public/                # 前端静态文件
+│   │   ├── index.html              # 主页面 (SPA)
+│   │   ├── js/main.js              # 主逻辑脚本
+│   │   ├── lib/                    # 依赖库 (Three.js, URDFLoader, STLLoader)
+│   │   └── assets/                 # 模型资源 (URDF + STL)
+│   ├── assets/                # 本地模型资源副本
+│   ├── server.js              # 本地 Express 开发服务器
+│   ├── vercel.json            # Vercel 部署配置
+│   └── config.json            # 项目配置
 │
 ├── openclaw_controller/ # ROS2 机械臂控制包 ⭐ 新增
 │   ├── openclaw_controller/   # 核心功能模块
@@ -162,6 +178,34 @@ ros2 launch openclaw_controller start.launch.py
 
 ### MCP 服务
 - `mcp/` - MCP 服务器和客户端
+
+### 🌐 Web 机械臂仿真器 ⭐ 新增
+基于 Three.js + URDFLoader 的 ArmPi Pro 6自由度机械臂 Web 3D 仿真器，支持在线预览和本地开发。
+
+**核心功能：**
+- **3D 实时渲染**：基于 Three.js 的机械臂模型可视化
+- **URDF 模型加载**：完整加载 armpi_fpv.urdf 机器人描述文件
+- **关节控制面板**：6个关节滑块实时控制 (joint1~joint5 + 夹爪)
+- **中英文切换**：内置中英双语界面
+- **颜色模式切换**：正常/碰撞检测/线框等多种显示模式
+- **一键复位/抓取动作**：预设动作组快速执行
+
+**技术栈：**
+- 前端：Three.js r128 + URDFLoader + STLLoader (UMD)
+- 后端（本地）：Express.js + CORS
+- 部署：Vercel Serverless Functions
+
+**在线体验：** [https://4-b-open-claw-6.vercel.app](https://4-b-open-claw-6.vercel.app)
+
+**本地启动方式：**
+```bash
+cd web-simulator
+npm install
+node server.js
+# 打开 http://localhost:3000
+```
+
+**详细文档：** [web-simulator/README.md](web-simulator/README.md)
 
 ### 🤖 OpenClaw Controller (ROS2) ⭐ 新增
 基于ROS2的机械臂语音交互与视觉抓取控制包，适用于树莓派4B平台的6自由度机械臂。
@@ -389,6 +433,6 @@ roslaunch armpi_remote_control gui.launch
 
 ---
 
-**更新日期**: 2026-04-05
+**更新日期**: 2026-05-03
 
 **项目仓库**: [GitHub - 4B-OpenClaw-6-](https://github.com/Yang-Ci/-4B-OpenClaw-6-)
